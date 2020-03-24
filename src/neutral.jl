@@ -9,9 +9,39 @@ Neutral-Model with mutation, but without selection. Calculates and returns the p
 
        ```
        """
-function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::Bool, file)
+function neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool, dynamics::Bool, File)
 
-    # apply needed functions
+### Error
+
+
+    if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
+        throw("Mutationrate has to be a number")
+    end
+
+    if typeof(Migration) != Bool
+        throw("Migration has to be a Bool")
+    end
+
+    if typeof(dynamics) != Bool
+        throw("Dynamics has to be a Bool")
+    end
+
+    if typeof(Steps) != Int64 && typeof(Steps) != Int32
+        throw("Steps has to be a Int")
+    end
+
+    for i in 1:length(Input)
+        if typeof(Input[i]) != BioSequence{DNAAlphabet{4}}
+            throw("Input must contain an Array with BioSequence{DNAAlphabet{4}}")
+        end
+    end
+
+    if typeof(File) != String
+        throw("File has to be a String")
+    end
+
+
+### Apply needed functions
     function remove!(arr, item)
         deleteat!(arr, findall(x->x==item, arr))
     end
@@ -56,7 +86,7 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
 
     # mutate yes or no with weights
     mutate = ["Yes", "No"]
-    mutation = Weights([mutationrate, 1 - mutationrate])
+    mutation = Weights([Mutationrate, 1 - Mutationrate])
     mutationsteps = 0
 
     # pop with potential mutant
@@ -100,7 +130,7 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
 
 
     # loop for sampling until pop is one species
-    while actualnumbers[pop[1]][1]!= length(pop)
+    while actualnumbers[pop[1]][1]!= length(pop) || timesteps == Steps
 
     # choosing one individual out of the pop by negativ selection coefficent
         append!(negativpop, [sample(pop)])
@@ -124,10 +154,10 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
         negativpop = []
 
     # combine pop and metapop in combinedpop
-        if migration == true
+        if Migration == true
             combinedpop = metapop
         end
-        if migration == false
+        if Migration == false
             append!(combinedpop,pop)
             append!(combinedpop,metapop)
         end
@@ -231,9 +261,9 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
     # increase savecounter
         savecounter = savecounter +1
 
-    # save and clear Dict every 10000 steps
-        if save == true
-            if savecounter == 10000 && filecounter == 1
+    # save and clear Dict every 1000 steps
+        if dynamics == true
+            if savecounter == 50000
                 f = jldopen("$File", "a+")
                 write(f, "$filecounter", plotcount)
                 close(f)
@@ -243,19 +273,9 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
                 for i in 1:length(pop)
                     plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
                 end
-            elseif savecounter == 10000 && filecounter > 1
-                plotcount = Dict()
-                for i in 1:length(pop)
-                    plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-                end
-                f = jldopen("$File", "a+")
-                write(f, "$filecounter", plotcount)
-                close(f)
-                savecounter = 1
-                filecounter = filecounter + 1
             end
         else
-            if savecounter == 10000
+            if savecounter == 1000
                 savecounter = 1
                 filecounter = filecounter + 1
                 plotcount = Dict()
@@ -276,7 +296,7 @@ function neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::
 
     # creating final sequence array as DNA
     for i in 1:length(pop)
-    	push!(final, LongDNASeq(pop[i]))
+    	push!(final,pop[i])
     end
 
     # Output

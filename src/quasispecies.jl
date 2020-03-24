@@ -1,112 +1,139 @@
 """
 quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
 
-Quasispecies-Model with mutation and selection. Calculates and returns the population until defined steps are reached. The function returns and array with the final sequences at the last time step, and array with the amout of a sequence for each time step and a dictionary.     
+Quasispecies-Model with mutation and selection. Calculates and returns the population until defined steps are reached. The function returns and array with the final sequences at the last time step, and array with the amout of a sequence for each time step and a dictionary.
 
        # Examples
        ```jldoctest
        julia> quasispecies([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.5,0.001,20)
-       
+
        ```
        """
 function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
 
+### Errors
+
+    if typeof(Fittest) != BioSequence{DNAAlphabet{4}}
+        throw("Fittest has to be a sequence")
+    end
+
+    for i in 1:length(Input)
+        if typeof(Input[i]) != BioSequence{DNAAlphabet{4}}
+            throw("Input must contain an Array with BioSequence{DNAAlphabet{4}}")
+        end
+    end
+
+    if (Fitness == NaN) || (typeof(Fitness) != Float64) || (typeof(Fitness) != Int64) && (typeof(Fitness) != Float64)
+        throw("Fitness has to be a number")
+    end
+
+
+    if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
+        throw("Mutationrate has to be a number")
+    end
+
+    if typeof(Steps) != Int64 && typeof(Steps) != Int32
+        throw("Steps has to be a Int")
+    end
+
+
+### Apply needed function
     function remove!(arr, item)
         deleteat!(arr, findall(x->x==item, arr))
-    end        
-        
+    end
+
 ### First Part
-    
+
     ## give starting pop
     pop = String[]
     if typeof(Input[1]) == String
         pop = String[Input]
-    else        
+    else
         for i in 1:length(Input)
             push!(pop, Input[i])
         end
     end
-   
+
     ## convert Fittest into String
-    if typeof(Fittest) == LongSequence{DNAAlphabet{4}}
+    if typeof(Fittest) == BioSequence{DNAAlphabet{4}}
         Fittest = convert(String, Fittest)
-    end    
-    
+    end
+
     # newpop for offsprings of pop
     newpop = []
-    
+
     # selection coefficient
     sel = Float64[]
-    
+
     # arrays for reproduction
     samplepop = []
 
-    
+
     # start for n
     n = 1
 
     # just a counter for loops
     counter = 1
-    
+
     # adding base for mutation
     basesA = ["T","G","C"]
     basesG = ["A","T","C"]
     basesT = ["A","G","C"]
     basesC = ["A","T","G"]
-    
+
     # mutate yes or no with weights
     mutate = ["Yes", "No"]
     mutation = Weights([Mutationrate, 1-Mutationrate])
     println(mutation)
-    # fitnesscounter    
-    fitnesscounter = 0    
-    
+    # fitnesscounter
+    fitnesscounter = 0
+
     # arrays for potential mutants
     splitmut = []
-    
+
     # number of mutations in simulation
     mutationsteps = 0
-    
+
     # timestep counter
     timesteps = 1
-    
-    
+
+
     # counter for numbers in every loop
     actualnumbers = Dict()
-    
+
     # counter for plot
     plotcount = Dict()
-    
+
     #creating array for final sequences
     final = []
-    
+
     ### Second Part ###
-    
+
     # calculate selection for elements in array Input
     for i in 1:length(pop)
         if pop[i] == Fittest
-           append!(sel, Fitness) 
+           append!(sel, Fitness)
         else
             for j in 1:length(pop[i])
                 if pop[i][j] == Fittest[j]
                     fitnesscounter = fitnesscounter +1
-                    
+
                 end
             end
             append!(sel, Fitness * (fitnesscounter / length(pop[i])))
             fitnesscounter = 0
         end
     end
-    
+
     # give weight to sel
     sel = Weights(sel)
-    
+
 
     # count actual numbers in pop
     for i in 1:length(pop)
         actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
     end
-        
+
     # adding values to plotcounter
     for i in 1:length(pop)
         plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
@@ -114,13 +141,13 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
 
 
     ### Third part
-    
-    
+
+
     # loop for sampling until pop is one species
     while n <= Steps
-    
+
     # create new pop (same size) with samples from old pop with mutation
-        
+
         while counter <= length(pop)
             push!(samplepop,sample(pop,sel))
             counter = counter + 1
@@ -135,43 +162,43 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
                     if sample(mutate, mutation) == "Yes"
                         splitmut[i] = sample(basesA)
                         mutationsteps = mutationsteps + 1
-                        
+
                     end
                 elseif splitmut[i] == 'G'
                     if sample(mutate, mutation) == "Yes"
                         splitmut[i] = sample(basesG)
                         mutationsteps = mutationsteps + 1
-                        
+
                     end
                 elseif splitmut[i] == 'C'
                     if sample(mutate, mutation) == "Yes"
                         splitmut[i] = sample(basesC)
                         mutationsteps = mutationsteps + 1
-                        
+
                     end
                 elseif splitmut[i] == 'T'
                     if sample(mutate, mutation) == "Yes"
                         splitmut[i] = sample(basesT)
                         mutationsteps = mutationsteps + 1
-                        
+
                     end
                 end
             end
             splitmut = [join(splitmut)]
             push!(newpop, join(splitmut))
-            splitmut = []   
-            
+            splitmut = []
+
         end
 
 
-    # clear actual numbers   
-        actualnumbers = Dict()   
-    
+    # clear actual numbers
+        actualnumbers = Dict()
+
      # adding mutant to keys if not already there
         for i in newpop
             if i in keys(plotcount)
-                
-            else 
+
+            else
                 if timesteps == 1
                     plotcount[i] = [0]
                 else
@@ -180,58 +207,58 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
                         push!(plotcount[i], 0)
                         counter = counter + 1
                     end
-                    
+
                 end
                 counter = 1
             end
         end
-        
+
     # increase timesteps
         timesteps = timesteps + 1
-    
-    # put newpop in pop
-        append!(pop, newpop)    
-    
 
-        
-        
-        
-           
+    # put newpop in pop
+        append!(pop, newpop)
+
+
+
+
+
+
     # calculate selection for elements in array Input
         sel = Float64[]
         for i in 1:length(pop)
             if pop[i] == Fittest
-               append!(sel, Fitness) 
+               append!(sel, Fitness)
             else
                 for j in 1:length(pop[i])
                     if pop[i][j] == Fittest[j]
                     fitnesscounter = fitnesscounter +1
-                    
+
                     end
                 end
                 append!(sel, Fitness * (fitnesscounter / length(pop[i])))
                 fitnesscounter = 0
             end
-        end 
-    
+        end
+
     # give weight to sel
-        sel = Weights(sel)        
+        sel = Weights(sel)
     # create dataframe with Seq and Sel
-        popdata = DataFrame(Seq = [], Sel = []) 
-        
+        popdata = DataFrame(Seq = [], Sel = [])
+
     # put data into frame
         for i in 1:length(pop)
             push!(popdata, [pop[i] sel[i]])
         end
-    
+
     # sort by selection
-        sort!(popdata, [:Sel])        
-    
+        sort!(popdata, [:Sel])
+
     # remove half of seq with lowest selection
         die = length(pop) / 2
         while counter <= die
             deleterows!(popdata, 1)
-            counter = counter  +1 
+            counter = counter  +1
         end
         counter = 1
 
@@ -241,7 +268,7 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
         for i in 1:length(popseq)
             push!(pop, popseq[i])
         end
-    
+
     # create sel with with remaining sel from dataframe
         sel = Float64[]
         popsel = convert(Matrix, popdata[:,2:2])
@@ -249,23 +276,23 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
             push!(sel, popsel[i])
         end
 
-    
+
     # give weight to sel
         sel = Weights(sel)
-    
-    # calculate new actual numbers   
+
+    # calculate new actual numbers
         for i in 1:length(pop)
             actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
-        end       
-    
+        end
+
     #clear newpop and samplepop
-        newpop= []        
+        newpop= []
         samplepop = []
-    
+
     # put values of keys in plotcounter, if key is not there than put 0 in
         for i in keys(plotcount)
-            if i in keys(actualnumbers)              
-                push!(plotcount[i],actualnumbers[i][1])      
+            if i in keys(actualnumbers)
+                push!(plotcount[i],actualnumbers[i][1])
             else
                 push!(plotcount[i], 0)
 
@@ -276,19 +303,19 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
     # increase n by 1
         n = n+1
     end
-    
-    # create a array with data from plotcounter for plotting    
+
+    # create a array with data from plotcounter for plotting
     plotdata = []
-    
+
     for i in keys(plotcount)
         push!(plotdata, plotcount[i] )
     end
-    
+
     # creating final sequence array as DNA
     for i in 1:length(pop)
-    push!(final, LongDNASeq(pop[i]))
+    push!(final, pop[i])
     end
-    
+
     # output
     return [final, plotdata, plotcount]
 end
