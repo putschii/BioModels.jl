@@ -1,15 +1,14 @@
 """
-moran(Input::Array,Fittest, Fitness, Mutationrate)
+moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, File)
 
-Moran-Model with mutation. Calculates and returns the population until fixation for each  	time step. Fitness of other sequences is calculated based on differences to fittest sequence. Works with an input of strings or with DNA sequences from BioSequences. The function returns and array with the amout of a sequence for each time step and a dictionary.
+Moran-Model with mutation. Calculates and returns the population until fixation for each  	time step. Fitness of other sequences is calculated based on differences to fittest sequence. Works with an input of strings or with DNA sequences from BioSequences. The function returns and array with the amout of a sequence for each time step and a dictionary. The data can be stored in a file if save is set to true. Therefore every time step of the first 10000 will be stored and after that only every 10000 step. If save is set to "false" only the last 10000 steps will be returned. File will be stored in same folder as the julia code.
 
        # Examples
        ```jldoctest
-       julia> moran([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.5,0.01)
-       julia> moran(["GGG","AAA","GAG"],"GGG",0.5,0.01)
+       julia> moran([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.5,0.01,500,false,"filenamehere.jld2")
        ```
        """
-function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, dynamics::Bool, File)
+function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, File)
 
 ### Error for wrong input
 
@@ -28,8 +27,8 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, dynamics::Boo
         throw("Mutationrate has to be a number")
     end
 
-    if typeof(dynamics) != Bool
-        throw("Dynamics has to be a Bool")
+    if typeof(Save) != Bool
+        throw("Save has to be a Bool")
     end
 
     if typeof(Steps) != Int64 && typeof(Steps) != Int32
@@ -282,7 +281,7 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, dynamics::Boo
         savecounter = savecounter +1
 
     # save and clear Dict every 50000 steps
-        if dynamics == true
+        if Save == true
             if savecounter == 50000
                 f = jldopen("$File", "a+")
                 write(f, "$filecounter", plotcount)

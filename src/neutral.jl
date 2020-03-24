@@ -1,11 +1,11 @@
 """
-neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::Bool, file)
+neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool, dynamics::Bool, File)
 
 Neutral-Model with mutation, but without selection. Calculates and returns the population until fixation for each time step based on migration from metapopulation. No changes in the metapopulation. If migration is set to true, then only sequences from the meta community will be used for replacement. If it is set to false, the population and meta community can be used for replacement.  Works with an input of strings or with DNA sequences from BioSequences. The function returns and array with the amout of a sequence for each time step and a dictionary. The data can be stored in a file if save is set to true. Therefore every time step of the first 10000 will be stored and after that only every 10000 step. If save is set to "false" only the last 10000 steps will be returned. File will be stored in same folder as the julia code.
 
        # Examples
        ```jldoctest
-       julia> neutral([dna"GGG",dna"AAA",dna"GAG"],[dna"GGA",dna"GCA",dna"ACA"],0.001, true, true, "yourfilenamehere.jld2")
+       julia> neutral([dna"GGG",dna"AAA",dna"GAG"],[dna"GGA",dna"GCA",dna"ACA"],0.001, 500,true, true, "yourfilenamehere.jld2")
 
        ```
        """
