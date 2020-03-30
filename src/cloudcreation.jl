@@ -71,7 +71,7 @@ function cloudcreation(size, length, distance)
 	end
         # Create output with sequences of type DNA
 	for i in 1:size
-    	push!(finaloutput,LongDNASeq(seqstorage[i]))
+    	push!(finaloutput,seqstorage[i])
     end
     # Output
     return finaloutput
