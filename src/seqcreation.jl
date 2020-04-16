@@ -11,10 +11,22 @@ Function to create an array with random sequences of type DNA with a defined len
 	["ATAG","AGGG","TCTG"]
 """
 function seqcreation(size, length)
-	# Startin at value of 1
+
+
+### Errors
+
+    if typeof(size) != Int64 && typeof(size) != Int32
+        throw("Size has to be a Int")
+    end
+    if typeof(length) != Int64 && typeof(length) != Int32
+        throw("Length has to be a Int")
+    end
+
+# Startin at value of 1
 	i = 1
 	# Storage for sequences
-	seqstorage = []
+	seqstorage = [randdnaseq(length)]
+    i = i +1
 	# Adding random sequences of defined length to the storage
 	while i <= size
 		seq = randdnaseq(length)
