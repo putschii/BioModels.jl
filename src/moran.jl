@@ -14,14 +14,6 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 
 ### Error for wrong input
 
-    if typeof(Fittest) != BioSequence{DNAAlphabet{4}}
-        throw("Fittest has to be a sequence")
-    end
-
-
-    #if (Fitness == NaN) || (typeof(Fitness) != Float64) || (typeof(Fitness) != Int64) && (typeof(Fitness) != Float64)
-     #   throw("Fitness has to be a number")
-    #end
 
 
     if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
@@ -36,11 +28,7 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
         throw("Steps has to be a Int")
     end
 
-    for i in 1:length(Input)
-        if typeof(Input[i]) != BioSequence{DNAAlphabet{4}}
-            throw("Input must contain an Array with BioSequence{DNAAlphabet{4}}")
-        end
-    end
+
 
     if typeof(File) != String
         throw("File has to be a String")
