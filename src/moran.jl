@@ -87,7 +87,7 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 1
+    timesteps = 0
 
     # savecounter
     savecounter = 1
@@ -145,7 +145,8 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
     # loop for sampling until pop is one species
     while finish != 0 && timesteps <= Steps
 
-
+    # increase timesteps
+        timesteps = timesteps + 1
     # Populate
 
         sampler = Matrix(undef,1,length(pop[1,:]))
@@ -242,8 +243,7 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
                 close(f)
         end
 
-    # increase timesteps
-        timesteps = timesteps + 1
+    # check for fixation
         finish = sum(fixmatrix)
 
     end
