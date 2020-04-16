@@ -255,6 +255,7 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 
     if Save == true
         println("Data is saved in File")
+        return(timesteps)
     else
         return [pop, timesteps]
     end
