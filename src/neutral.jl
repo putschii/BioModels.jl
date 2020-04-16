@@ -88,7 +88,12 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
     # timestep counter
     timesteps = 0
 
-
+    # save pop
+    if Save == true
+        f = jldopen("$File", "a+")
+        write(f, "0", pop)
+        close(f)
+    end
 
     ### Second Part ###
 
