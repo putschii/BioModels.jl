@@ -25,11 +25,6 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
         throw("Steps has to be a Int")
     end
 
-    for i in 1:length(Input)
-        if typeof(Input[i]) != BioSequence{DNAAlphabet{4}}
-            throw("Input must contain an Array with BioSequence{DNAAlphabet{4}}")
-        end
-    end
 
     if typeof(File) != String
         throw("File has to be a String")
