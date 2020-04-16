@@ -265,6 +265,7 @@ function wrightfisher(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     
     if Save == true
         println("Data is saved in file")
+        return(timesteps)
     else
         return [pop, timesteps]
     end
