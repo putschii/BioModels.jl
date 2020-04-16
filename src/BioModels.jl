@@ -22,7 +22,7 @@ cloudcreation(size, length, distance)
 module BioModels
 
 using StatsBase, BioSequences, Random, DataFrames, FileIO, JLD2, LinearAlgebra
-export neutral, wrightfisher, moran, quasispecies, simplequasi, seqcreation, cloudcreation, seqanalysis
+export neutral, wrightfisher, moran, quasispecies, simplequasi, seqcreation, cloudcreation, seqanalysis, clearseq
 
 include("neutral.jl")
 include("wrightfisher.jl")
@@ -32,6 +32,7 @@ include("cloudcreation.jl")
 include("quasispecies.jl")
 include("simplequasi.jl")
 include("seqanalysis.jl")
+include("clearseq.jl")
 
 
 end # module

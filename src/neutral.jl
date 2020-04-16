@@ -26,6 +26,7 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
     end
 
 
+
     if typeof(File) != String
         throw("File has to be a String")
     end
@@ -85,7 +86,7 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 1
+    timesteps = 0
 
 
 
@@ -125,6 +126,8 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
 
 
     # Populate
+        # increase timesteps
+        timesteps = timesteps + 1
         sampler = Matrix(undef,1,length(pop[1,:]))
         if Migonly == true
             keeper = sample(metalength)
@@ -210,8 +213,7 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
         end
 
         finish = sum(fixmatrix)
-    # increase timesteps
-        timesteps = timesteps + 1
+
     end
 
     if Save == true

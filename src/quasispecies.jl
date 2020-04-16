@@ -84,7 +84,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 1
+    timesteps = 0
 
     # savecounter
     savecounter = 1
@@ -122,6 +122,8 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
 
 
     # Populate
+        # increase timesteps
+        timesteps = timesteps + 1
         sampler = pop
         for i in 1:length(poplength)
             c = sample(poplength,sel)
@@ -235,8 +237,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
                 close(f)
         end
 
-    # increase timesteps
-        timesteps = timesteps + 1
+
     end
 
     if Save == true
