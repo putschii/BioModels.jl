@@ -223,6 +223,7 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
 
     if Save == true
         println("Data is saved in File")
+        return(timesteps)
     else
         return [pop, timesteps]
     end
