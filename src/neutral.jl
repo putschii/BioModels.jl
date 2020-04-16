@@ -1,29 +1,24 @@
 """
 neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool, dynamics::Bool, File)
 
-Neutral-Model with mutation, but without selection. Calculates and returns the population until fixation for each time step based on migration from metapopulation. No changes in the metapopulation. If migration is set to true, then only sequences from the meta community will be used for replacement. If it is set to false, the population and meta community can be used for replacement.  Works with an input of strings or with DNA sequences from BioSequences. The function returns and array with the amout of a sequence for each time step and a dictionary. The data can be stored in a file if save is set to true. Therefore every time step of the first 10000 will be stored and after that only every 10000 step. If save is set to "false" only the last 10000 steps will be returned. File will be stored in same folder as the julia code.
+The function works as a Neutral-Model with mutation and the mutation rate can be defined by the user. The model will run until it reached fixation, i.e. until the whole population is based on only one DNA sequence for each individual or until it reached the final amount of time steps defined by the user with the variable Steps.
+If save is set to true, every time step will be saved in a jld2 File named by the user. It is important that the file is a string and ends with .jld2. The file will be stored in the same folder than the julia file. If Save is set to false, the function returns the population of the last time step and the needed time steps. For further use of the data, it is recommended to set Save to true. The fitness of each sequences is calculated based on differences in bases to fittest sequence defined by the user. The model works with an input of DNA sequences in an array constructed with BioSequences.
 
        # Examples
        ```jldoctest
-       julia> neutral([dna"GGG",dna"AAA",dna"GAG"],[dna"GGA",dna"GCA",dna"ACA"],0.001, 500,true, true, "yourfilenamehere.jld2")
+       julia> neutral([dna"GGG",dna"AAA",dna"GAG"],[dna"GGA",dna"GCA",dna"ACA"],0.0001, 500,true, true, "yourfilenamehere.jld2")
 
        ```
        """
-function neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool, dynamics::Bool, File)
-
-### Error
+function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save::Bool,File)
 
 
-    if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
-        throw("Mutationrate has to be a number")
-    end
+### Error for wrong input
 
-    if typeof(Migration) != Bool
-        throw("Migration has to be a Bool")
-    end
 
-    if typeof(dynamics) != Bool
-        throw("Dynamics has to be a Bool")
+
+    if typeof(Save) != Bool
+       throw("Dynamics has to be a Bool")
     end
 
     if typeof(Steps) != Int64 && typeof(Steps) != Int32
@@ -40,266 +35,193 @@ function neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool,
         throw("File has to be a String")
     end
 
+### First Part
 
-### Apply needed functions
-    function remove!(arr, item)
-        deleteat!(arr, findall(x->x==item, arr))
-    end
+    ## give starting pop
+    pop = Matrix(undef,length(Input),length(Input[1]))
 
-
-    ### First Part
-
-    # give starting pop
-    pop = String[]
-    if typeof(Input[1]) == String
-        pop = String[Input]
-    else
-        for i in 1:length(Input)
-            push!(pop, Input[i])
+    for i in 1:length(Input)
+        for j in 1:length(Input[i])
+            pop[i,j] = Input[i][j]
         end
     end
 
-    #give starting metapop
-    metapop = String[]
-    if typeof(Meta[1]) == String
-        metapop = String[Meta]
-    else
-        for i in 1:length(Meta)
-            push!(metapop, Meta[i])
+    # Size of Pop
+    poplength = []
+
+    for i in 1:size(pop)[1]
+        push!(poplength,i)
+    end
+
+    # Meta community
+    met = Matrix(undef,length(Meta),length(Meta[1]))
+
+    for i in 1:length(Meta)
+        for j in 1:length(Meta[i])
+            met[i,j] = Meta[i][j]
         end
     end
 
-    # negativpop to clear one individual out
-    negativpop = String[]
+    # Size of Pop
+    metalength = []
+
+    for i in 1:size(met)[1]
+        push!(metalength,i)
+    end
+
+    # matrix for fixation
+    fixmatrix = Matrix(undef,length(Input),length(Input[1]))
+
+
+    # fitnesscounter
+    fitnesscounter = 0
 
     # just a counter for loops
     counter = 1
 
-    # pool of combined meta and pop to choose from
-    combinedpop = String[]
-
     # adding base for mutation
-    basesA = ["T","G","C"]
-    basesG = ["A","T","C"]
-    basesT = ["A","G","C"]
-    basesC = ["A","T","G"]
+    basesA = [DNA_T,DNA_G,DNA_C]
+    basesG = [DNA_A,DNA_T,DNA_C]
+    basesT = [DNA_A,DNA_G,DNA_C]
+    basesC = [DNA_A,DNA_T,DNA_G]
 
-    # mutate yes or no with weights
-    mutate = ["Yes", "No"]
-    mutation = Weights([Mutationrate, 1 - Mutationrate])
+
+    # number of mutations in simulation
     mutationsteps = 0
 
-    # pop with potential mutant
-    mutatepop = String[]
-
-    # splitted mutant sequence for change of bases
-    splitmut = []
-
-    # time steps for adding 0s to later mutants in keys
+    # timestep counter
     timesteps = 1
 
-    # counter for numbers in every loop
-    actualnumbers = Dict()
-
-    # counter for overall numbers
-    plotcount = Dict()
-
-    #creating array for final sequences
-    final = []
-
-    # savecounter
-    savecounter = 1
-    filecounter = 1
-
-    ### Second Part
 
 
-    # adding values to counter
-    for i in 1:length(pop)
-    	actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
+    ### Second Part ###
+
+
+
+
+    # Fixationmatrix with same bases (1 for missmatch, 0 for match)
+
+
+    for i in 1:size(pop)[2]
+        for j in 1:(length(pop[:,i])-1)
+            if pop[:,i][j] == pop[:,i][j+1]
+                fixmatrix[j,i] = 0
+            else
+                fixmatrix[j,i] = 1
+            end
+            if j == (length(pop[:,i])-1)
+                if pop[:,i][j] == pop[:,i][j+1]
+                    fixmatrix[j+1,i] = 0
+                else
+                    fixmatrix[j+1,i] = 1
+                end
+            end
+        end
+
     end
 
-
-    # adding keys of pop with values of input
-    for i in 1:length(pop)
-        plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-    end
-
+    finish = sum(fixmatrix)
 
     ### Third part
 
 
     # loop for sampling until pop is one species
-    while actualnumbers[pop[1]][1]!= length(pop) || timesteps == Steps
+    while finish != 0 && timesteps <= Steps
 
-    # choosing one individual out of the pop by negativ selection coefficent
-        append!(negativpop, [sample(pop)])
 
-    # marking the individual of negativpop in pop as "x"
-        while counter <= length(pop)
-            if pop[counter] == negativpop[1]
-                pop[counter] = "x"
-                break
-            else
-                counter = counter + 1
-
+    # Populate
+        sampler = Matrix(undef,1,length(pop[1,:]))
+        if Migonly == true
+            keeper = sample(metalength)
+            leaver = sample(poplength)
+            for j in 1:length(met[keeper,:])
+                sampler[1,j] = met[keeper,j]
             end
-        end
-        counter = 1
 
-    # remove the marked individual
-        remove!(pop,"x")
 
-    # clear negativpop
-        negativpop = []
+        elseif Migonly == false
+            combipop = vcat(pop,met)
+            combilength = []
+            for i in 1:size(combipop)[1]
+                push!(combilength,i)
+            end
+            keeper = sample(combilength)
+            leaver = sample(poplength)
+            for j in 1:length(combipop[keeper,:])
+                sampler[1,j] = combipop[keeper,j]
+            end
 
-    # combine pop and metapop in combinedpop
-        if Migration == true
-            combinedpop = metapop
-        end
-        if Migration == false
-            append!(combinedpop,pop)
-            append!(combinedpop,metapop)
         end
 
-    # append mutatepop with a new individual from pop or metapop
-        append!(mutatepop, [sample(combinedpop)])
-        #println(mutatepop)
-    # splitting mutant into bases
-        for i in mutatepop
-            append!(splitmut, i)
-        end
 
-    # check for bases in mutant to mutate
-        for i in 1:length(splitmut)
-            if splitmut[i] == 'A'
-                if sample(mutate, mutation) == "Yes"
-                    splitmut[i] = sample(basesA)
+    # Mutate
+
+        for i in 1:length(sampler)
+
+            if sampler[i] == DNA_A
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesA)
                     mutationsteps = mutationsteps + 1
 
                 end
-            elseif splitmut[i] == 'G'
-                if sample(mutate, mutation) == "Yes"
-                    splitmut[i] = sample(basesG)
+            elseif sampler[i] == DNA_G
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesG)
                     mutationsteps = mutationsteps + 1
 
                 end
-            elseif splitmut[i] == 'C'
-                if sample(mutate, mutation) == "Yes"
-                    splitmut[i] = sample(basesC)
+            elseif sampler[i] == DNA_C
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesC)
                     mutationsteps = mutationsteps + 1
 
                 end
-            elseif splitmut[i] == 'T'
-                if sample(mutate, mutation) == "Yes"
-                    splitmut[i] = sample(basesT)
+            elseif sampler[i] == DNA_T
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesT)
                     mutationsteps = mutationsteps + 1
-
                 end
             end
         end
 
+    # remove leaver sequence and replace it with sample
+        pop[leaver,:] = sampler[1,:]
+
+    # Fixationmatrix with same bases (1 for missmatch, 0 for match)
 
 
-     # putting bases together
-        splitmut = [join(splitmut)]
-
-     # adding mutant to pop
-        push!(pop, join(splitmut))
-
-    # clear actual numbers
-        actualnumbers = Dict()
-
-    # adding mutant to keys if not already there
-        for i in splitmut
-            if i in keys(plotcount)
-
-            else
-                if timesteps == 1
-                    plotcount[i] = [0]
+        for i in 1:size(pop)[2]
+            for j in 1:(length(pop[:,i])-1)
+                if pop[:,i][j] == pop[:,i][j+1]
+                    fixmatrix[j,i] = 0
                 else
-                    plotcount[i] = [0]
-                    while counter < timesteps
-                        push!(plotcount[i], 0)
-                        counter = counter + 1
+                    fixmatrix[j,i] = 1
+                end
+                if j == (length(pop[:,i])-1)
+                    if pop[:,i][j] == pop[:,i][j+1]
+                        fixmatrix[j+1,i] = 0
+                    else
+                        fixmatrix[j+1,i] = 1
                     end
-
                 end
             end
         end
 
+    # Save Matrix for every timestep
+        if Save == true
+                f = jldopen("$File", "a+")
+                write(f, "$timesteps", pop)
+                close(f)
+        end
+
+        finish = sum(fixmatrix)
     # increase timesteps
         timesteps = timesteps + 1
-
-    # reset counter
-        counter = 1
-
-    # calculate new actual numbers
-        for i in 1:length(pop)
-            actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
-        end
-
-    # put values of keys in plotcounter, if key is not in pop than put 0 in
-        for i in keys(plotcount)
-            if i in keys(actualnumbers)
-                push!(plotcount[i],actualnumbers[i][1])
-            else
-                push!(plotcount[i], 0)
-
-            end
-
-        end
-
-
-    # clear mutantpop
-        mutatepop = []
-        splitmut = []
-
-    # clear combinedpop
-        combinedpop = []
-
-    # increase savecounter
-        savecounter = savecounter +1
-
-    # save and clear Dict every 1000 steps
-        if dynamics == true
-            if savecounter == 50000
-                f = jldopen("$File", "a+")
-                write(f, "$filecounter", plotcount)
-                close(f)
-                savecounter = 1
-                filecounter = filecounter + 1
-                plotcount = Dict()
-                for i in 1:length(pop)
-                    plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-                end
-            end
-        else
-            if savecounter == 1000
-                savecounter = 1
-                filecounter = filecounter + 1
-                plotcount = Dict()
-                for i in 1:length(pop)
-                    plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-                end
-            end
-        end
-
-
     end
 
-    # create a array with data from plotcounter for plotting
-    plotdata = []
-    for i in keys(plotcount)
-        push!(plotdata, plotcount[i] )
+    if Save == true
+        println("Data is saved in File")
+    else
+        return [pop, timesteps]
     end
-
-    # creating final sequence array as DNA
-    for i in 1:length(pop)
-    	push!(final,pop[i])
-    end
-
-    # Output
-
-    return [plotdata, plotcount, timesteps, pop[1]]
 end

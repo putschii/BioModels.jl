@@ -5,11 +5,12 @@ The functions cloudcreation and seqcreation can be used to create test setups fo
 
 # Functions contained in the package:
 ```
-wrightfisher(Input::Array,Fittest, Fitness, Mutationrate)
-moran(Input::Array,Fittest, Fitness, Mutationrate)
-neutral(Input::Array,Meta::Array, mutationrate, migration::Bool, save::Bool, file)
-quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Deathrate, Steps, Rep)
+wrightfisher(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
+moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
+neutral(Input::Array,Meta::Array, Mutationrate, Steps, Migration::Bool, dynamics::Bool, File)
+quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 simplequasi(Seq::Array, Numbers::Array, Fittness::Array, Fmutation::Array, Bmutation::Array, Steps)
+seqanalysis(File,Start,Steps,Stop)
 seqcreation(size, length)
 cloudcreation(size, length, distance)
 ```
@@ -20,8 +21,8 @@ cloudcreation(size, length, distance)
        """
 module BioModels
 
-using StatsBase, BioSequences, Random, DataFrames, FileIO, JLD2
-export neutral, wrightfisher, moran, quasispecies, simplequasi, seqcreation, cloudcreation
+using StatsBase, BioSequences, Random, DataFrames, FileIO, JLD2, LinearAlgebra
+export neutral, wrightfisher, moran, quasispecies, simplequasi, seqcreation, cloudcreation, seqanalysis
 
 include("neutral.jl")
 include("wrightfisher.jl")
@@ -30,6 +31,7 @@ include("seqcreation.jl")
 include("cloudcreation.jl")
 include("quasispecies.jl")
 include("simplequasi.jl")
+include("seqanalysis.jl")
 
 
 end # module

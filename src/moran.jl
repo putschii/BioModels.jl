@@ -1,26 +1,27 @@
 """
-moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, File)
+moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 
-Moran-Model with mutation. Calculates and returns the population until fixation for each  	time step. Fitness of other sequences is calculated based on differences to fittest sequence. Works with an input of strings or with DNA sequences from BioSequences. The function returns and array with the amout of a sequence for each time step and a dictionary. The data can be stored in a file if save is set to true. Therefore every time step of the first 10000 will be stored and after that only every 10000 step. If save is set to "false" only the last 10000 steps will be returned. File will be stored in same folder as the julia code.
+The function works as a Moran-Model with mutation and the mutation rate can be defined by the user. The model will run until it reached fixation, i.e. until the whole population is based on only one DNA sequence for each individual or until it reached the final amount of time steps defined by the user with the variable Steps.
+It calculates and returns the population until fixation for each time step. If save is set to true, every time step will be saved in a jld2 File named by the user. It is important that the file is a string and ends with .jld2. The file will be stored in the same folder than the julia file. If Save is set to false, the function returns the population of the last time step and the needed time steps. For further use of the data, it is recommended to set Save to true. The fitness of each sequences is calculated based on differences in bases to fittest sequence defined by the user. The model works with an input of DNA sequences in an array constructed with BioSequences.
 
        # Examples
        ```jldoctest
-       julia> moran([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.5,0.01,500,false,"filenamehere.jld2")
+       julia> moran([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.0001,500,false,"filenamehere.jld2")
        ```
        """
-function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, File)
+function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
+
 
 ### Error for wrong input
-
 
     if typeof(Fittest) != BioSequence{DNAAlphabet{4}}
         throw("Fittest has to be a sequence")
     end
 
 
-    if (Fitness == NaN) || (typeof(Fitness) != Float64) || (typeof(Fitness) != Int64) && (typeof(Fitness) != Float64)
-        throw("Fitness has to be a number")
-    end
+    #if (Fitness == NaN) || (typeof(Fitness) != Float64) || (typeof(Fitness) != Int64) && (typeof(Fitness) != Float64)
+     #   throw("Fitness has to be a number")
+    #end
 
 
     if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
@@ -28,7 +29,7 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, F
     end
 
     if typeof(Save) != Bool
-        throw("Save has to be a Bool")
+       throw("Dynamics has to be a Bool")
     end
 
     if typeof(Steps) != Int64 && typeof(Steps) != Int32
@@ -45,22 +46,41 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, F
         throw("File has to be a String")
     end
 
-### apply needed functions
-    function remove!(arr, item)
-        deleteat!(arr, findall(x->x==item, arr))
-    end
-
 ### First Part
 
     ## give starting pop
-    pop = Input
+    pop = Matrix(undef,length(Input),length(Input[1]))
+
+    for i in 1:length(Input)
+        for j in 1:length(Input[i])
+            pop[i,j] = Input[i][j]
+        end
+    end
+
+    # Size of Pop
+    poplength = []
+
+    for i in 1:size(pop)[1]
+        push!(poplength,i)
+    end
 
 
-    negativpop = []
+    # Turn Fittest to Matrix
+    fit = Matrix(undef,1,length(Fittest))
 
-    ## starting selection coefficent based on last value of input array
+    for i in 1:length(Fittest)
+        fit[1,i] = Fittest[i]
+    end
+
+
+    # Matrix for selection
+    selmatrix = Matrix(undef,length(Input),length(Input[1]))
+
     sel = Float64[]
-    negativsel = Float64[]
+
+    # matrix for fixation
+    fixmatrix = Matrix(undef,length(Input),length(Input[1]))
+
 
     # fitnesscounter
     fitnesscounter = 0
@@ -69,17 +89,11 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, F
     counter = 1
 
     # adding base for mutation
-    basesA = [dna"T",dna"G",dna"C"]
-    basesG = [dna"A",dna"T",dna"C"]
-    basesT = [dna"A",dna"G",dna"C"]
-    basesC = [dna"A",dna"T",dna"G"]
+    basesA = [DNA_T,DNA_G,DNA_C]
+    basesG = [DNA_A,DNA_T,DNA_C]
+    basesT = [DNA_A,DNA_G,DNA_C]
+    basesC = [DNA_A,DNA_T,DNA_G]
 
-    # mutate yes or no with weights
-    mutate = ["Yes", "No"]
-    mutation = Weights([Mutationrate, 1 - Mutationrate])
-
-    # arrays for potential mutants
-    mutatepop = []
 
     # number of mutations in simulation
     mutationsteps = 0
@@ -91,228 +105,164 @@ function moran(Input::Array,Fittest, Fitness, Mutationrate, Steps, Save::Bool, F
     savecounter = 1
     filecounter = 1
 
-    # counter for numbers in every loop
-    actualnumbers = Dict()
-
-    # counter for plot
-    plotcount = Dict()
-
-
 
     ### Second Part ###
 
 
     # calculate selection for elements in array Input
-    for o in 1:length(pop)
-        if pop[o] == Fittest
-           append!(sel, Fitness)
-        else
-            for j in 1:length(pop[o])
-                if pop[o][j] == Fittest[j]
-                    fitnesscounter = fitnesscounter +1
 
-                end
+    for i in 1:size(pop)[1]
+        for j in 1:length(pop[i,:])
+            if pop[i,j] == fit[1,j]
+                selmatrix[i,j] = 1
+            else
+                selmatrix[i,j] = 0
             end
-            append!(sel, Fitness * (fitnesscounter / length(pop[o])))
-            fitnesscounter = 0
         end
     end
 
-    for o in sel
-        append!(negativsel, 1 - o)
+    for i in 1:size(selmatrix)[1]
+        push!(sel,sum(selmatrix[i,:]))
     end
-
 
     # give weight to selection coefficent
     sel = Weights(sel)
-    negativsel = Weights(negativsel)
+
+    # Fixationmatrix with same bases (1 for missmatch, 0 for match)
 
 
-    # count actual numbers in pop
-    for o in 1:length(pop)
-        actualnumbers[pop[o]] = (count(isequal(pop[o]),pop))
+    for i in 1:size(pop)[2]
+        for j in 1:(length(pop[:,i])-1)
+            if pop[:,i][j] == pop[:,i][j+1]
+                fixmatrix[j,i] = 0
+            else
+                fixmatrix[j,i] = 1
+            end
+            if j == (length(pop[:,i])-1)
+                if pop[:,i][j] == pop[:,i][j+1]
+                    fixmatrix[j+1,i] = 0
+                else
+                    fixmatrix[j+1,i] = 1
+                end
+            end
+        end
+
     end
 
-    # adding values to plotcounter
-    for o in 1:length(pop)
-    	plotcount[pop[o]] = [(count(isequal(pop[o]),pop))]
-    end
+    finish = sum(fixmatrix)
 
     ### Third part
 
+
     # loop for sampling until pop is one species
-    while actualnumbers[pop[1]][1] != length(pop) || Steps == timesteps
+    while finish != 0 && timesteps <= Steps
 
-    # choosing one individual out of the pop by negativ selection coefficent
-        append!(negativpop, [sample(pop,negativsel)])
 
-    # choose one from pop to reproduce with mutation
-        append!(mutatepop,[sample(pop,sel)])
+    # Populate
 
-        for i in mutatepop
-            for j in 1:length(i)
-                if i[j] == dna"A"
-                    if sample(mutate, mutation) == "Yes"
-                        i[j] = sample(basesA)
-                        mutationsteps = mutationsteps + 1
+        sampler = Matrix(undef,1,length(pop[1,:]))
+        keeper = sample(poplength,sel)
+        negsel = sel *-1
+        leaver = sample(poplength,sel)
+        for j in 1:length(pop[keeper,:])
+            sampler[1,j] = pop[keeper,j]
+        end
 
-                    end
-                elseif i[j] == dna"G"
-                    if sample(mutate, mutation) == "Yes"
-                        i[j] = sample(basesG)
-                        mutationsteps = mutationsteps + 1
 
-                    end
-                elseif i[j] == dna"C"
-                    if sample(mutate, mutation) == "Yes"
-                        i[j] = sample(basesC)
-                        mutationsteps = mutationsteps + 1
 
-                    end
-                elseif i[j] == dna"T"
-                    if sample(mutate, mutation) == "Yes"
-                        i[j] = sample(basesT)
-                        mutationsteps = mutationsteps + 1
+    # Mutate
+        for i in 1:length(sampler)
 
-                    end
+            if sampler[i] == DNA_A
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesA)
+                    mutationsteps = mutationsteps + 1
+
+                end
+            elseif sampler[i] == DNA_G
+                if rand() <= Mutationrate
+                   sampler[i] = sample(basesG)
+                    mutationsteps = mutationsteps + 1
+
+                end
+            elseif sampler[i] == DNA_C
+                if rand() <= Mutationrate
+                    pop[i] = sample(basesC)
+                    mutationsteps = mutationsteps + 1
+
+                end
+            elseif sampler[i] == DNA_T
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesT)
+                    mutationsteps = mutationsteps + 1
                 end
             end
         end
 
-    # marking the individual of negativpop in pop as N
-        while counter <= length(pop)
-            if pop[counter] == negativpop[1]
-                pop[counter] = dna"N"
-                break
-            else
-                counter = counter + 1
-
-            end
-        end
-        counter = 1
-
-    # remove the marked individual
-        remove!(pop,dna"N")
-
-    # clear negativpop
-        negativpop = []
-
-    # add Mutant to pop
-        push!(pop, mutatepop[1])
-
-    # clear arrays
-
-        mutatepop = []
+    # remove leaver sequence and replace it with sample
+        pop[leaver,:] = sampler[1,:]
 
 
-    # clear selection coefficent
+    # Reset selection
+
+        selmatrix = Matrix(undef,length(Input),length(Input[1]))
         sel = Float64[]
-        negativsel = Float64[]
+        fixmatrix = Matrix(undef,length(Input),length(Input[1]))
 
-    # find new selection coefficent
-        for o in 1:length(pop)
-            if pop[o] == Fittest
-               push!(sel, Fitness)
-            else
-                for j in 1:length(pop[o])
-                    if pop[o][j] == Fittest[j]
-                        fitnesscounter = fitnesscounter +1
-
-                    end
-                end
-                push!(sel, Fitness * (fitnesscounter / length(pop[o])))
-                fitnesscounter = 0
-            end
-        end
-
-        for o in sel
-            append!(negativsel, 1 - o)
-        end
-
-    # turn new selection coefficent into old one and give weights
-        sel = Weights(sel)
-        negativsel = Weights(negativsel)
-
-    # clear actual numbers
-        actualnumbers = Dict()
-
-    # calculate new actual numbers
-        for o in 1:length(pop)
-            actualnumbers[pop[o]] = (count(isequal(pop[o]),pop))
-        end
-
-     # adding mutant to keys if not already there
-        for o in pop
-            if o in keys(plotcount)
-
-            else
-                if timesteps == 1
-                    plotcount[o] = [0]
+    # calculate selection
+        for i in 1:size(pop)[1]
+            for j in 1:length(pop[i,:])
+                if pop[i,j] == fit[1,j]
+                    selmatrix[i,j] = 1
                 else
-                    plotcount[o] = [0]
-                    while counter < timesteps
-                        push!(plotcount[o], 0)
-                        counter = counter + 1
-                    end
-
+                    selmatrix[i,j] = 0
                 end
             end
+        end
+
+        for i in 1:size(selmatrix)[1]
+            append!(sel,sum(selmatrix[i,:]))
+        end
+
+    # give weight to selection coefficent
+        sel = Weights(sel)
+
+    # Fixationmatrix with same bases (1 for missmatch, 0 for match)
+
+
+        for i in 1:size(pop)[2]
+            for j in 1:(length(pop[:,i])-1)
+                if pop[:,i][j] == pop[:,i][j+1]
+                    fixmatrix[j,i] = 0
+                else
+                    fixmatrix[j,i] = 1
+                end
+                if j == (length(pop[:,i])-1)
+                    if pop[:,i][j] == pop[:,i][j+1]
+                        fixmatrix[j+1,i] = 0
+                    else
+                        fixmatrix[j+1,i] = 1
+                    end
+                end
+            end
+        end
+
+    # Save Matrix for every timestep
+        if Save == true
+                f = jldopen("$File", "a+")
+                write(f, "$timesteps", pop)
+                close(f)
         end
 
     # increase timesteps
         timesteps = timesteps + 1
-        counter = 1
+        finish = sum(fixmatrix)
 
-
-
-
-    # put values of keys in plotcounter, if key is not there than put 0 in
-        for o in keys(plotcount)
-            if o in keys(actualnumbers)
-                push!(plotcount[o],actualnumbers[o][1])
-            else
-                push!(plotcount[o], 0)
-
-            end
-
-        end
-
-    # increase savecounter
-        savecounter = savecounter +1
-
-    # save and clear Dict every 50000 steps
-        if Save == true
-            if savecounter == 50000
-                f = jldopen("$File", "a+")
-                write(f, "$filecounter", plotcount)
-                close(f)
-                savecounter = 1
-                filecounter = filecounter + 1
-                plotcount = Dict()
-                for i in 1:length(pop)
-                    plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-                end
-            end
-        # clear every 1000 steps without saving
-        else
-            if savecounter == 1000
-                savecounter = 1
-                filecounter = filecounter + 1
-                plotcount = Dict()
-                for i in 1:length(pop)
-                    plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-                end
-            end
-        end
     end
 
-
-    # create a array with data from plotcounter for plotting
-
-    plotdata = []
-    for o in keys(plotcount)
-        push!(plotdata, plotcount[o] )
+    if Save == true
+        println("Data is saved in File")
+    else
+        return [pop, timesteps]
     end
-
-    return [plotdata, plotcount, timesteps, pop[1]]
 end

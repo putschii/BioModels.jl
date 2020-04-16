@@ -1,20 +1,36 @@
 """
-quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
+quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 
-Quasispecies-Model with mutation and selection. Calculates and returns the population until defined steps are reached. The function returns and array with the final sequences at the last time step, and array with the amout of a sequence for each time step and a dictionary.
+The function works as a Quasispecies-Model with mutation and the mutation rate can be defined by the user. Unlike the previous models, the Quasispecies-Model will run until it reached the final amount of time steps defined by the user with the variable Steps. If save is set to true, every time step will be saved in a jld2 File named by the user. It is important that the file is a string and ends with .jld2. The file will be stored in the same folder than the julia file. If Save is set to false, the function returns the population of the last time step and the needed time steps. For further use of the data, it is recommended to set Save to true. The fitness of each sequences is calculated based on differences in bases to fittest sequence defined by the user. The model works with an input of DNA sequences in an array constructed with BioSequences.
+
 
        # Examples
        ```jldoctest
-       julia> quasispecies([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.5,0.001,20)
+       julia> quasispecies([dna"GGG",dna"AAA",dna"GAG"],dna"GGG",0.0001,20,true,"falenamehere.jld2")
 
        ```
        """
-function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
+function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
 
-### Errors
+
+### Error for wrong input
 
     if typeof(Fittest) != BioSequence{DNAAlphabet{4}}
         throw("Fittest has to be a sequence")
+    end
+
+
+
+    if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
+        throw("Mutationrate has to be a float")
+    end
+
+    if typeof(Save) != Bool
+       throw("Dynamics has to be a Bool")
+    end
+
+    if typeof(Steps) != Int64 && typeof(Steps) != Int32
+        throw("Steps has to be a Int")
     end
 
     for i in 1:length(Input)
@@ -23,73 +39,54 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
         end
     end
 
-    if (Fitness == NaN) || (typeof(Fitness) != Float64) || (typeof(Fitness) != Int64) && (typeof(Fitness) != Float64)
-        throw("Fitness has to be a number")
-    end
-
-
-    if Mutationrate == NaN || typeof(Mutationrate) != Float64 || typeof(Mutationrate) != Int64 && typeof(Mutationrate) != Float64
-        throw("Mutationrate has to be a number")
-    end
-
-    if typeof(Steps) != Int64 && typeof(Steps) != Int32
-        throw("Steps has to be a Int")
-    end
-
-
-### Apply needed function
-    function remove!(arr, item)
-        deleteat!(arr, findall(x->x==item, arr))
+    if typeof(File) != String
+        throw("File has to be a String")
     end
 
 ### First Part
 
     ## give starting pop
-    pop = String[]
-    if typeof(Input[1]) == String
-        pop = String[Input]
-    else
-        for i in 1:length(Input)
-            push!(pop, Input[i])
+    pop = Matrix(undef,length(Input),length(Input[1]))
+
+    for i in 1:length(Input)
+        for j in 1:length(Input[i])
+            pop[i,j] = Input[i][j]
         end
     end
 
-    ## convert Fittest into String
-    if typeof(Fittest) == BioSequence{DNAAlphabet{4}}
-        Fittest = convert(String, Fittest)
+    # Size of Pop
+    poplength = []
+
+    for i in 1:size(pop)[1]
+        push!(poplength,i)
     end
 
-    # newpop for offsprings of pop
-    newpop = []
 
-    # selection coefficient
+    # Turn Fittest to Matrix
+    fit = Matrix(undef,1,length(Fittest))
+
+    for i in 1:length(Fittest)
+        fit[1,i] = Fittest[i]
+    end
+
+
+    # Matrix for selection
+    selmatrix = Matrix(undef,length(Input),length(Input[1]))
+
     sel = Float64[]
 
-    # arrays for reproduction
-    samplepop = []
-
-
-    # start for n
-    n = 1
+    # fitnesscounter
+    fitnesscounter = 0
 
     # just a counter for loops
     counter = 1
 
     # adding base for mutation
-    basesA = ["T","G","C"]
-    basesG = ["A","T","C"]
-    basesT = ["A","G","C"]
-    basesC = ["A","T","G"]
+    basesA = [DNA_T,DNA_G,DNA_C]
+    basesG = [DNA_A,DNA_T,DNA_C]
+    basesT = [DNA_A,DNA_G,DNA_C]
+    basesC = [DNA_A,DNA_T,DNA_G]
 
-    # mutate yes or no with weights
-    mutate = ["Yes", "No"]
-    mutation = Weights([Mutationrate, 1-Mutationrate])
-    println(mutation)
-    # fitnesscounter
-    fitnesscounter = 0
-
-    # arrays for potential mutants
-    splitmut = []
 
     # number of mutations in simulation
     mutationsteps = 0
@@ -97,225 +94,162 @@ function quasispecies(Input::Array, Fittest, Fitness, Mutationrate, Steps)
     # timestep counter
     timesteps = 1
 
+    # savecounter
+    savecounter = 1
+    filecounter = 1
 
-    # counter for numbers in every loop
-    actualnumbers = Dict()
-
-    # counter for plot
-    plotcount = Dict()
-
-    #creating array for final sequences
-    final = []
 
     ### Second Part ###
 
-    # calculate selection for elements in array Input
-    for i in 1:length(pop)
-        if pop[i] == Fittest
-           append!(sel, Fitness)
-        else
-            for j in 1:length(pop[i])
-                if pop[i][j] == Fittest[j]
-                    fitnesscounter = fitnesscounter +1
 
-                end
+    # calculate selection for elements in array Input
+    for i in 1:size(pop)[1]
+        for j in 1:length(pop[i,:])
+            if pop[i,j] == fit[1,j]
+                selmatrix[i,j] = 1
+            else
+                selmatrix[i,j] = 0
             end
-            append!(sel, Fitness * (fitnesscounter / length(pop[i])))
-            fitnesscounter = 0
         end
     end
 
-    # give weight to sel
+    for i in 1:size(selmatrix)[1]
+        push!(sel,sum(selmatrix[i,:]))
+    end
+
+    # give weight to selection coefficent
     sel = Weights(sel)
 
-
-    # count actual numbers in pop
-    for i in 1:length(pop)
-        actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
-    end
-
-    # adding values to plotcounter
-    for i in 1:length(pop)
-        plotcount[pop[i]] = [(count(isequal(pop[i]),pop))]
-    end
 
 
     ### Third part
 
 
     # loop for sampling until pop is one species
-    while n <= Steps
+    while timesteps <= Steps
 
-    # create new pop (same size) with samples from old pop with mutation
 
-        while counter <= length(pop)
-            push!(samplepop,sample(pop,sel))
-            counter = counter + 1
+    # Populate
+        sampler = pop
+        for i in 1:length(poplength)
+            c = sample(poplength,sel)
+            for j in 1:length(pop[c,:])
+                sampler[i,j] = pop[c,j]
+            end
         end
 
-        counter = 1
+    # Mutate
+        for i in 1:length(sampler)
 
-        for t in samplepop
-            append!(splitmut,t)
-            for i in 1:length(splitmut)
-                if splitmut[i] == 'A'
-                    if sample(mutate, mutation) == "Yes"
-                        splitmut[i] = sample(basesA)
-                        mutationsteps = mutationsteps + 1
+            if sampler[i] == DNA_A
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesA)
+                    mutationsteps = mutationsteps + 1
 
-                    end
-                elseif splitmut[i] == 'G'
-                    if sample(mutate, mutation) == "Yes"
-                        splitmut[i] = sample(basesG)
-                        mutationsteps = mutationsteps + 1
+                end
+            elseif sampler[i] == DNA_G
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesG)
+                    mutationsteps = mutationsteps + 1
 
-                    end
-                elseif splitmut[i] == 'C'
-                    if sample(mutate, mutation) == "Yes"
-                        splitmut[i] = sample(basesC)
-                        mutationsteps = mutationsteps + 1
+                end
+            elseif sampler[i] == DNA_C
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesC)
+                    mutationsteps = mutationsteps + 1
 
-                    end
-                elseif splitmut[i] == 'T'
-                    if sample(mutate, mutation) == "Yes"
-                        splitmut[i] = sample(basesT)
-                        mutationsteps = mutationsteps + 1
-
-                    end
+                end
+            elseif sampler[i] == DNA_T
+                if rand() <= Mutationrate
+                    sampler[i] = sample(basesT)
+                    mutationsteps = mutationsteps + 1
                 end
             end
-            splitmut = [join(splitmut)]
-            push!(newpop, join(splitmut))
-            splitmut = []
-
         end
 
 
-    # clear actual numbers
-        actualnumbers = Dict()
+    # Combine pop and sampler
 
-     # adding mutant to keys if not already there
-        for i in newpop
-            if i in keys(plotcount)
+        pop = vcat(pop,sampler)
 
-            else
-                if timesteps == 1
-                    plotcount[i] = [0]
+
+    # find new selection coefficent
+
+    # Reset selection
+
+        selmatrix = Matrix(undef, size(pop)[1], size(pop)[2])
+        sel = Float64[]
+    # calculate selection
+        for i in 1:size(pop)[1]
+            for j in 1:size(pop)[2]
+                if pop[i,j] == fit[1,j]
+                    selmatrix[i,j] = 1
                 else
-                    plotcount[i] = [0]
-                    while counter < timesteps
-                        push!(plotcount[i], 0)
-                        counter = counter + 1
-                    end
-
+                    selmatrix[i,j] = 0
                 end
-                counter = 1
             end
+        end
+
+        for i in 1:size(selmatrix)[1]
+            append!(sel,sum(selmatrix[i,:]))
+        end
+
+    # give weight to selection coefficent
+        sel = Weights(sel)
+
+    # Remove low selection sequences
+
+        sort = hcat(sel,pop)
+        sort = sort[sortperm(sort[:, 1]), :]
+        pop = sort[:,2:size(sort)[2]]
+        newpop = pop[(length(poplength)+1):size(pop)[1],:]
+        pop = Matrix(undef,length(Input),length(Input[1]))
+
+        for i in 1:size(newpop)[1]
+            for j in 1:size(newpop)[2]
+                pop[i,j] = newpop[i,j]
+            end
+        end
+
+    # find new selection coefficent
+
+    # Reset selection
+
+        selmatrix = Matrix(undef, size(pop)[1], size(pop)[2])
+        sel = Float64[]
+    # calculate selection
+        for i in 1:size(pop)[1]
+            for j in 1:size(pop)[2]
+                if pop[i,j] == fit[1,j]
+                    selmatrix[i,j] = 1
+                else
+                    selmatrix[i,j] = 0
+                end
+            end
+        end
+
+        for i in 1:size(selmatrix)[1]
+            append!(sel,sum(selmatrix[i,:]))
+        end
+
+    # give weight to selection coefficent
+        sel = Weights(sel)
+
+
+    # Save Matrix for every timestep
+        if Save == true
+                f = jldopen("$File", "a+")
+                write(f, "$timesteps", pop)
+                close(f)
         end
 
     # increase timesteps
         timesteps = timesteps + 1
-
-    # put newpop in pop
-        append!(pop, newpop)
-
-
-
-
-
-
-    # calculate selection for elements in array Input
-        sel = Float64[]
-        for i in 1:length(pop)
-            if pop[i] == Fittest
-               append!(sel, Fitness)
-            else
-                for j in 1:length(pop[i])
-                    if pop[i][j] == Fittest[j]
-                    fitnesscounter = fitnesscounter +1
-
-                    end
-                end
-                append!(sel, Fitness * (fitnesscounter / length(pop[i])))
-                fitnesscounter = 0
-            end
-        end
-
-    # give weight to sel
-        sel = Weights(sel)
-    # create dataframe with Seq and Sel
-        popdata = DataFrame(Seq = [], Sel = [])
-
-    # put data into frame
-        for i in 1:length(pop)
-            push!(popdata, [pop[i] sel[i]])
-        end
-
-    # sort by selection
-        sort!(popdata, [:Sel])
-
-    # remove half of seq with lowest selection
-        die = length(pop) / 2
-        while counter <= die
-            deleterows!(popdata, 1)
-            counter = counter  +1
-        end
-        counter = 1
-
-    # create pop with remaining seq
-        pop = String[]
-        popseq = convert(Matrix, popdata[:,1:1])
-        for i in 1:length(popseq)
-            push!(pop, popseq[i])
-        end
-
-    # create sel with with remaining sel from dataframe
-        sel = Float64[]
-        popsel = convert(Matrix, popdata[:,2:2])
-        for i in 1:length(popsel)
-            push!(sel, popsel[i])
-        end
-
-
-    # give weight to sel
-        sel = Weights(sel)
-
-    # calculate new actual numbers
-        for i in 1:length(pop)
-            actualnumbers[pop[i]] = (count(isequal(pop[i]),pop))
-        end
-
-    #clear newpop and samplepop
-        newpop= []
-        samplepop = []
-
-    # put values of keys in plotcounter, if key is not there than put 0 in
-        for i in keys(plotcount)
-            if i in keys(actualnumbers)
-                push!(plotcount[i],actualnumbers[i][1])
-            else
-                push!(plotcount[i], 0)
-
-            end
-
-        end
-
-    # increase n by 1
-        n = n+1
     end
 
-    # create a array with data from plotcounter for plotting
-    plotdata = []
-
-    for i in keys(plotcount)
-        push!(plotdata, plotcount[i] )
+    if Save == true
+        println("Data is saved in File")
+    else
+        return [pop, timesteps]
     end
-
-    # creating final sequence array as DNA
-    for i in 1:length(pop)
-    push!(final, pop[i])
-    end
-
-    # output
-    return [final, plotdata, plotcount]
 end
