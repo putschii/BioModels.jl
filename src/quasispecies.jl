@@ -89,7 +89,13 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     # savecounter
     savecounter = 1
     filecounter = 1
-
+   
+    # save pop
+    if Save == true
+        f = jldopen("$File", "a+")
+        write(f, "0", pop)
+        close(f)
+    end
 
     ### Second Part ###
 
