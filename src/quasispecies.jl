@@ -248,6 +248,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
 
     if Save == true
         println("Data is saved in File")
+        return(timesteps)
     else
         return [pop, timesteps]
     end
