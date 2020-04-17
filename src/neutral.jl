@@ -86,7 +86,7 @@ function neutral(Input::Array,Meta::Array,Mutationrate,Steps,Migonly::Bool,Save:
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 0
+    timesteps = 1
 
     # save pop
     if Save == true
