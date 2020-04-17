@@ -84,7 +84,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 1
+    timesteps = 0
 
     # savecounter
     savecounter = 1
@@ -124,7 +124,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
 
 
     # loop for sampling until pop is one species
-    while timesteps <= Steps
+    while timesteps < Steps
 
 
     # Populate
