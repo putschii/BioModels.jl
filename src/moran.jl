@@ -88,7 +88,7 @@ function moran(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, File)
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 0
+    timesteps = 1
 
     # savecounter
     savecounter = 1
