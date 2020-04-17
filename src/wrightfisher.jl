@@ -155,7 +155,7 @@ function wrightfisher(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     
     
     # loop for sampling until pop is one species
-    while finish != 0 && timesteps <= Steps
+    while finish != 0 && timesteps < Steps
     
     # Populate
         timesteps = timesteps + 1
