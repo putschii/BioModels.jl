@@ -84,7 +84,7 @@ function quasispecies(Input::Array,Fittest, Mutationrate, Steps, Save::Bool, Fil
     mutationsteps = 0
 
     # timestep counter
-    timesteps = 0
+    timesteps = 1
 
     # savecounter
     savecounter = 1
