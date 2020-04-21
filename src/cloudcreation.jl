@@ -1,7 +1,8 @@
 """
-cloudcreation(size, length, distance)
+cloudcreation(Size, Length, Distance)
 
-Function to create an array with a random sequences of type dna with defined length and copies with defined distance.
+Function to create an array with a random sequences of type dna with defined length. The first created sequence will represent the master sequence,
+all other sequences are copies with defined distance from the master sequence.
 
        # Examples
        ```jldoctest
@@ -10,25 +11,33 @@ Function to create an array with a random sequences of type dna with defined len
        ```
 	["ATAG","AGGG","TCAG"]
 """
-function cloudcreation(size, length, distance)
+function cloudcreation(Size, Length, Distance)
+    
+    
+    ### Errors
+    
+    if typeof(Size) != Int64 && typeof(Size) != Int32
+        throw("Size has to be a Int")
+    end
+    if typeof(Length) != Int64 && typeof(Length) != Int32
+        throw("Length has to be a Int")
+    end 
+    
     # adding base for mutation
-    basesA = ["T","G","C"]
-    basesG = ["A","T","C"]
-    basesT = ["A","G","C"]
-    basesC = ["A","T","G"]
+    basesA = [DNA_T,DNA_G,DNA_C]
+    basesG = [DNA_A,DNA_T,DNA_C]
+    basesT = [DNA_A,DNA_G,DNA_C]
+    basesC = [DNA_A,DNA_T,DNA_G]
     # Start at second squence
     start = 2
     # Setup array for sequences
     seqstorage = []
     # Mastersequence
-    seq = randdnaseq(length)
-    seq = convert(String,seq)
-    # Array for splitting bases
-    split = []
+    seq = randdnaseq(Length)
     # size of non mutations
-    no_mutation = zeros(length-distance)
+    no_mutation = zeros(Length-Distance)
     # size of mutations
-    mutation = ones(distance)
+    mutation = ones(Distance)
     # Array for mutation
     mutate = []
     # Outputarray
@@ -39,40 +48,32 @@ function cloudcreation(size, length, distance)
     # Put Mastersequence into storage
     push!(seqstorage,seq)
     # Loop while
-    while start <= size
+    while start <= Size
         # Shuffle array with 0 and 1 for mutation
         mutate = shuffle(mutate)
-	# Split bases
-        for i in seq
-            append!(split,i)
-        end
+        seq = seqstorage[1][1:end]
         # Mutate
-        for i in 1:length
+        for i in 1:length(mutate)
             if mutate[i] == 1.0
-                if split[i] == 'A'
-                    split[i] = sample(basesA)
-                elseif split[i] == 'G'
-                    split[i] = sample(basesG)
-                elseif split[i] == 'C'
-                    split[i] = sample(basesC)
-                elseif split[i] == 'T'
-                    split[i] = sample(basesT)
+                if seq[i] == DNA_A
+                    seq[i] = sample(basesA)
+                elseif seq[i] == DNA_G
+                    seq[i] = sample(basesG)
+                elseif seq[i] == DNA_C
+                    seq[i] = sample(basesC)
+                elseif seq[i] == DNA_T
+                    seq[i] = sample(basesT)
                 end
             end
         end
         # Add new sequence to storage
-        push!(seqstorage, join(split))
-        # Clear array
-        split = []
+        push!(seqstorage, seq)
         # Increase Start
         start = start + 1
 
 
 	end
-        # Create output with sequences of type DNA
-	for i in 1:size
-    	push!(finaloutput,seqstorage[i])
-    end
+
     # Output
-    return finaloutput
+    return seqstorage
 end
